@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Title</title>
 </head>
 <body>
-<p th:text="'The best movie is: ' + ${BestMovie}"></p>
+<p th:text="'The best movie is: ' + ${bestMovie}"></p>
+<p th:text="'Voters: ' + ${bestMovieVoters}" />
 <a href="/">Home</a>
 </body>
 </html>

@@ -1,5 +1,7 @@
 package com.javaunit3.springmvc;
 
+import com.javaunit3.springmvc.model.MovieEntity;
+import com.javaunit3.springmvc.model.VoteEntity;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +10,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+import static java.lang.Integer.parseInt;
 
 
 @Controller
@@ -28,35 +35,73 @@ public class MovieController {
     //set request mapping to /bestMovie
 
     @RequestMapping("/bestMovie")
-    public String getBestMoviePage(Model model){
-        //add an attribute to the model named "BestMovie" and set it to the movie's title
-        model.addAttribute("BestMovie", bestMovieService.getBestMovie().getTitle());
-        //return string bestMovie which is the corresponding html page
+    public String getBestMoviePage(Model model) {
+        Session session = sessionFactory.getCurrentSession();
+        session.beginTransaction();
+
+        List<MovieEntity> movieEntityList = session.createQuery("from MovieEntity").list();
+        movieEntityList.sort(Comparator.comparing(movieEntity -> movieEntity.getVotes().size()));
+
+        MovieEntity movieWithMostVotes = movieEntityList.get(movieEntityList.size() - 1);
+        List<String> voterNames = new ArrayList<>();
+
+        for (VoteEntity vote: movieWithMostVotes.getVotes()) {
+            voterNames.add(vote.getVoterName());
+        }
+
+        String voterNamesList = String.join(",", voterNames);
+
+        model.addAttribute("bestMovie", movieWithMostVotes.getTitle());
+        model.addAttribute("bestMovieVoters", voterNamesList);
+
+        session.getTransaction().commit();
+
         return "bestMovie";
     }
     //new method with request mapping of voteForBestMovie that returns a string allowing us to load page when we run server
     @RequestMapping("/voteForBestMovieForm")
-    public String voteForBestMovieForm(){
+    public String voteForBestMovieFormPage(Model model) {
+        Session session = sessionFactory.getCurrentSession();
+
+        session.beginTransaction();
+
+        List<MovieEntity> movieEntityList = session.createQuery("from MovieEntity").list();
+
+        session.getTransaction().commit();
+
+        model.addAttribute("movies", movieEntityList);
 
         return "voteForBestMovie";
     }
     //new method request mapping that will handle form data
     @RequestMapping("/voteForBestMovie")
-    public String voteForBestMovie (HttpServletRequest request, Model model){
-        //get the submitted movie title from the request
-        String movieTitle = request.getParameter("movieTitle");
-        //add it to the model
-        model.addAttribute("BestMovieVote", movieTitle);
+    public String voteForBestMovie(HttpServletRequest request, Model model) {
+        String movieId = request.getParameter("movieId");
+        String voterName = request.getParameter("voterName");
+
+        Session session = sessionFactory.getCurrentSession();
+
+        session.beginTransaction();
+
+        MovieEntity movieEntity = (MovieEntity) session.get(MovieEntity.class, Integer.parseInt(movieId));
+        VoteEntity newVote = new VoteEntity();
+        newVote.setVoterName(voterName);
+        movieEntity.addVote(newVote);
+
+        session.update(movieEntity);
+
+        session.getTransaction().commit();
+
         return "voteForBestMovie";
     }
     //method that returns addMovie to directly to addMovie.html
     @RequestMapping("/addMovieForm")
-    public String addMovieFormPage() {
+    public String addMovieForm() {
         return "addMovie";
     }
     //method that gets the title, maturity rating, and genre from the request and assign them to local variables
     @RequestMapping("/addMovie")
-    public String addMoviePage(HttpServletRequest request, Model model){
+    public String addMovie(HttpServletRequest request){
         String movieTitle = request.getParameter("movieTitle");
         String maturityRating = request.getParameter("maturityRating");
         String genre = request.getParameter("genre");
