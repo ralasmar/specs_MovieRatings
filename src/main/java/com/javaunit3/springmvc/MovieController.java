@@ -38,7 +38,7 @@ public class MovieController {
     public String getBestMoviePage(Model model) {
         Session session = sessionFactory.getCurrentSession();
         session.beginTransaction();
-
+        //get the movie with the most votes
         List<MovieEntity> movieEntityList = session.createQuery("from MovieEntity").list();
         movieEntityList.sort(Comparator.comparing(movieEntity -> movieEntity.getVotes().size()));
 
@@ -50,7 +50,7 @@ public class MovieController {
         }
 
         String voterNamesList = String.join(",", voterNames);
-
+        //populate attributes for the best movie and voter name
         model.addAttribute("bestMovie", movieWithMostVotes.getTitle());
         model.addAttribute("bestMovieVoters", voterNamesList);
 
@@ -64,11 +64,11 @@ public class MovieController {
         Session session = sessionFactory.getCurrentSession();
 
         session.beginTransaction();
-
+        //get list of movie entities from database
         List<MovieEntity> movieEntityList = session.createQuery("from MovieEntity").list();
 
         session.getTransaction().commit();
-
+        //populate movies attribute with list
         model.addAttribute("movies", movieEntityList);
 
         return "voteForBestMovie";
@@ -76,16 +76,18 @@ public class MovieController {
     //new method request mapping that will handle form data
     @RequestMapping("/voteForBestMovie")
     public String voteForBestMovie(HttpServletRequest request, Model model) {
+        //get movie id and voter name from request
         String movieId = request.getParameter("movieId");
         String voterName = request.getParameter("voterName");
 
         Session session = sessionFactory.getCurrentSession();
 
         session.beginTransaction();
-
+        //get existing movie from database using movie id
         MovieEntity movieEntity = (MovieEntity) session.get(MovieEntity.class, Integer.parseInt(movieId));
         VoteEntity newVote = new VoteEntity();
         newVote.setVoterName(voterName);
+        //add a new vote to the movie
         movieEntity.addVote(newVote);
 
         session.update(movieEntity);
